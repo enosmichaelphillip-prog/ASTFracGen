@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axiom Set Theory</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+        }
+        canvas {
+            border: 1px solid #333;
+            background: #000;
+            max-width: 100%;
+            display: block;
+        }
+        .overlay-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .overlay-text.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .overlay-text a {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 58px;
+            font-weight: bold;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: all;
+            transition: color 0.3s ease;
+            white-space: nowrap;
+            display: inline-block;
+            margin-left: 0px;
+        }
+        .overlay-text a:hover {
+            color: #4a9eff;
+        }
+        .controls {
+            margin-top: 20px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 15px;
+            max-width: 1200px;
+            justify-content: center;
+            align-items: flex-end;
+            transition: all 0.3s ease;
+        }
+        .controls.visible {
+            display: flex;
+        }
+        .toggle-controls {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 20px;
+            background: #4a9eff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        .toggle-controls:hover {
+            background: #3a8eef;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        label {
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        input[type="range"] {
+            width: 100px;
+        }
+        button {
+            padding: 8px 12px;
+            background: #4a9eff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        button:hover {
+            background: #3a8eef;
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <canvas id="fractalCanvas" width="1200" height="800"></canvas>
+        <div class="overlay-text">
+            <a href="https://open.spotify.com/artist/1pMIKU42qbYTlSTLP8tMXR?si=b3ANSK9_SImrYzisAu0jsw" target="_blank">AXIOM SET THEORY</a>
+        </div>
+    </div>
+    <button class="toggle-controls" id="toggleControls">Show Controls</button>
+    <div class="controls">
+        <div class="control-group">
+            <label>Recursion Depth: <span id="depthValue">4</span></label>
+            <input type="range" id="depth" min="1" max="6" value="4">
+        </div>
+        <div class="control-group">
+            <label>Circle Count: <span id="circlesValue">8</span></label>
+            <input type="range" id="circles" min="4" max="12" value="8">
+        </div>
+        <div class="control-group">
+            <label>Size Ratio: <span id="ratioValue">0.35</span></label>
+            <input type="range" id="ratio" min="0.2" max="0.5" step="0.05" value="0.35">
+        </div>
+        <div class="control-group">
+            <label>Web Lines: <span id="webLinesValue">12</span></label>
+            <input type="range" id="webLines" min="0" max="24" value="12">
+        </div>
+        <div class="control-group">
+            <label>Color Hue: <span id="hueValue">200</span></label>
+            <input type="range" id="hue" min="0" max="360" value="200">
+        </div>
+        <div class="control-group">
+            <label>Animation Speed: <span id="speedValue">4</span></label>
+            <input type="range" id="speed" min="0" max="5" step="0.1" value="4">
+        </div>
+        <button id="regenerate">Regenerate</button>
+        <button id="randomizeColors">Randomize Colors</button>
+        <button id="toggleAnimation">Stop Animation</button>
+        <button id="toggleText">Hide Text</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('fractalCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let config = {
+            depth: 4,
+            circleCount: 8,
+            sizeRatio: 0.35,
+            webLines: 12,
+            hue: 200,
+            randomColors: false,
+            colorMap: new Map(),
+            animating: true,
+            animationSpeed: 4,
+            time: 0
+        };
+
+        let animationId = null;
+
+        function getRandomHue() {
+            return Math.floor(Math.random() * 360);
+        }
+
+        function getCircleColor(x, y, depth) {
+            if (!config.randomColors) {
+                return config.hue;
+            }
+            
+            const key = `${Math.round(x)}_${Math.round(y)}_${depth}`;
+            if (!config.colorMap.has(key)) {
+                config.colorMap.set(key, getRandomHue());
+            }
+            return config.colorMap.get(key);
+        }
+
+        function drawCurvedWeb(x, y, radius, rings) {
+            if (rings === 0) return;
+            
+            const hue = getCircleColor(x, y, config.depth);
+            ctx.strokeStyle = `hsla(${hue}, 70%, 70%, 0.6)`;
+            ctx.lineWidth = 1;
+            
+            const segments = Math.round(config.circleCount);
+            
+            // Animated spiral rotation - much slower
+            const spiralRotation = config.animating ? config.time * 0.25 : 0;
+            
+            // Draw spiral staircase effect - curved flowing lines
+            const spiralLines = segments * 2;
+            for (let i = 0; i < spiralLines; i++) {
+                const startAngle = (Math.PI * 2 / spiralLines) * i + spiralRotation;
+                
+                ctx.beginPath();
+                const ringSteps = Math.round(rings * 2);
+                for (let r = 0; r <= ringSteps; r++) {
+                    const t = r / ringSteps;
+                    const currentRadius = radius * t;
+                    const angleOffset = t * Math.PI * 2; // Creates the spiral twist
+                    const angle = startAngle + angleOffset;
+                    
+                    const px = x + Math.cos(angle) * currentRadius;
+                    const py = y + Math.sin(angle) * currentRadius;
+                    
+                    if (r === 0) {
+                        ctx.moveTo(px, py);
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // Draw concentric curved rings with animation
+            const ringCount = Math.round(rings);
+            for (let r = 1; r <= ringCount; r++) {
+                const ringRadius = (radius / ringCount) * r;
+                
+                for (let i = 0; i < segments; i++) {
+                    const startAngle = (Math.PI * 2 / segments) * i + spiralRotation * 0.3;
+                    const endAngle = (Math.PI * 2 / segments) * (i + 1) + spiralRotation * 0.3;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, ringRadius, startAngle, endAngle);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw radial curved lines
+            for (let i = 0; i < segments; i++) {
+                const angle = (Math.PI * 2 / segments) * i + spiralRotation * 0.2;
+                
+                ctx.beginPath();
+                for (let r = 0; r <= ringCount; r++) {
+                    const ringRadius = (radius / ringCount) * r;
+                    const px = x + Math.cos(angle) * ringRadius;
+                    const py = y + Math.sin(angle) * ringRadius;
+                    
+                    if (r === 0) {
+                        ctx.moveTo(px, py);
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                ctx.stroke();
+            }
+        }
+
+        function drawCircularFractal(x, y, radius, depth) {
+            // Use fractional depth for smoother transitions
+            if (depth <= 0 || radius < 2) return;
+            
+            const hue = getCircleColor(x, y, depth);
+            const alpha = Math.min(1, 0.4 + (depth * 0.1));
+            ctx.strokeStyle = `hsla(${hue}, 70%, ${60 + depth * 5}%, ${alpha})`;
+            ctx.lineWidth = Math.max(0.8, depth * 0.5);
+            
+            // Draw main circle
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Draw web pattern only for top level circles
+            if (Math.abs(depth - config.depth) < 0.5) {
+                drawCurvedWeb(x, y, radius, config.webLines);
+            }
+            
+            // Calculate child circle properties
+            const newRadius = radius * config.sizeRatio;
+            const distance = radius - newRadius;
+            
+            // Use fractional circleCount for smooth transitions
+            const baseCount = Math.floor(config.circleCount);
+            const fraction = config.circleCount - baseCount;
+            
+            // Draw base circles
+            for (let i = 0; i < baseCount; i++) {
+                const angle = (Math.PI * 2 / config.circleCount) * i;
+                const newX = x + Math.cos(angle) * distance;
+                const newY = y + Math.sin(angle) * distance;
+                
+                drawCircularFractal(newX, newY, newRadius, depth - 1);
+            }
+            
+            // Draw partial circle with reduced opacity for smooth transition
+            if (fraction > 0.01) {
+                const angle = (Math.PI * 2 / config.circleCount) * baseCount;
+                const newX = x + Math.cos(angle) * distance;
+                const newY = y + Math.sin(angle) * distance;
+                
+                // Save current globalAlpha
+                const prevAlpha = ctx.globalAlpha;
+                ctx.globalAlpha = fraction;
+                drawCircularFractal(newX, newY, newRadius, depth - 1);
+                ctx.globalAlpha = prevAlpha;
+            }
+        }
+
+        function animate() {
+            if (!config.animating) return;
+            
+            // Increment time based on animation speed
+            config.time += 0.005 * config.animationSpeed; // Slower increment for smoother changes
+            
+            // Animate parameters with smooth oscillations
+            const baseDepth = 4;
+            const baseCircles = 8;
+            const baseRatio = 0.35;
+            const baseWebLines = 12;
+            const baseHue = 200;
+            
+            // Use sine waves with slower frequencies for smoother transitions
+            if (!config.randomColors) {
+                config.hue = baseHue + Math.sin(config.time * 0.6) * 60; // 4x faster
+            }
+            
+            // Very slow morph of depth (between 3 and 5)
+            config.depth = baseDepth + Math.sin(config.time * 0.08) * 0.8;
+            
+            // Very slow morph of circle count (between 6 and 10)
+            config.circleCount = baseCircles + Math.sin(config.time * 0.09) * 1.5;
+            
+            // Morph size ratio - 2x faster
+            config.sizeRatio = baseRatio + Math.sin(config.time * 0.2) * 0.05;
+            
+            // Morph web lines - 6x faster (between 8 and 16)
+            config.webLines = baseWebLines + Math.sin(config.time * 0.36) * 3;
+            
+            // Update display values
+            updateValue('depth', config.depth.toFixed(2));
+            updateValue('circles', config.circleCount.toFixed(2));
+            updateValue('ratio', config.sizeRatio.toFixed(3));
+            updateValue('webLines', config.webLines.toFixed(2));
+            if (!config.randomColors) {
+                updateValue('hue', Math.round(config.hue));
+            }
+            
+            draw();
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function startAnimation() {
+            config.animating = true;
+            animate();
+        }
+
+        function stopAnimation() {
+            config.animating = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const initialRadius = Math.min(canvas.height * 0.42, 330);
+            
+            // Draw center fractal
+            drawCircularFractal(centerX, centerY, initialRadius, config.depth);
+            
+            // Draw surrounding fractals at the same size, positioned to create the radiating effect
+            // The distance between circle centers should be 2 * radius so they touch
+            const spacing = initialRadius * 2;
+            
+            // Calculate how many circles we need based on the circle count setting
+            const positions = config.circleCount;
+            
+            for (let i = 0; i < positions; i++) {
+                const angle = (Math.PI * 2 / positions) * i;
+                const surroundX = centerX + Math.cos(angle) * spacing;
+                const surroundY = centerY + Math.sin(angle) * spacing;
+                
+                // Draw the surrounding circle at the same size and depth
+                drawCircularFractal(surroundX, surroundY, initialRadius, config.depth);
+            }
+        }
+
+        function updateValue(id, value) {
+            document.getElementById(id + 'Value').textContent = value;
+        }
+
+        document.getElementById('depth').addEventListener('input', (e) => {
+            config.depth = parseInt(e.target.value);
+            updateValue('depth', config.depth);
+            draw();
+        });
+
+        document.getElementById('circles').addEventListener('input', (e) => {
+            config.circleCount = parseInt(e.target.value);
+            updateValue('circles', config.circleCount);
+            draw();
+        });
+
+        document.getElementById('ratio').addEventListener('input', (e) => {
+            config.sizeRatio = parseFloat(e.target.value);
+            updateValue('ratio', config.sizeRatio);
+            draw();
+        });
+
+        document.getElementById('webLines').addEventListener('input', (e) => {
+            config.webLines = parseInt(e.target.value);
+            updateValue('webLines', config.webLines);
+            draw();
+        });
+
+        document.getElementById('hue').addEventListener('input', (e) => {
+            config.hue = parseInt(e.target.value);
+            config.randomColors = false;
+            config.colorMap.clear();
+            updateValue('hue', config.hue);
+            if (!config.animating) {
+                draw();
+            }
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            config.animationSpeed = parseFloat(e.target.value);
+            updateValue('speed', config.animationSpeed);
+        });
+
+        document.getElementById('regenerate').addEventListener('click', () => {
+            stopAnimation();
+            draw();
+        });
+
+        document.getElementById('randomizeColors').addEventListener('click', () => {
+            config.randomColors = true;
+            config.colorMap.clear();
+            if (!config.animating) {
+                draw();
+            }
+        });
+
+        document.getElementById('toggleAnimation').addEventListener('click', (e) => {
+            if (config.animating) {
+                stopAnimation();
+                e.target.textContent = 'Start Animation';
+            } else {
+                startAnimation();
+                e.target.textContent = 'Stop Animation';
+            }
+        });
+
+        document.getElementById('toggleControls').addEventListener('click', (e) => {
+            const controls = document.querySelector('.controls');
+            controls.classList.toggle('visible');
+            e.target.textContent = controls.classList.contains('visible') ? 'Hide Controls' : 'Show Controls';
+        });
+
+        document.getElementById('toggleText').addEventListener('click', (e) => {
+            const overlayText = document.querySelector('.overlay-text');
+            overlayText.classList.toggle('hidden');
+            e.target.textContent = overlayText.classList.contains('hidden') ? 'Show Text' : 'Hide Text';
+        });
+
+        // Start animation on page load
+        startAnimation();
+    </script>
+</body>
+</html>
