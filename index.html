@@ -109,6 +109,43 @@
         button:hover {
             background: #3a8eef;
         }
+
+        .contact-link {
+            position: fixed;
+            bottom: 12px;
+            right: 16px;
+            color: #4a9eff;
+            font-size: 13px;
+            text-decoration: none;
+            z-index: 1000;
+        }
+        .contact-link:hover {
+            color: #fff;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .overlay-text a {
+                font-size: 26px;
+                letter-spacing: 6px;
+            }
+            .controls {
+                gap: 10px;
+            }
+            input[type="range"] {
+                width: 140px;
+            }
+            .toggle-controls {
+                padding: 10px 24px;
+                font-size: 14px;
+            }
+            button {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -149,6 +186,8 @@
         <button id="toggleAnimation">Stop Animation</button>
         <button id="toggleText">Hide Text</button>
     </div>
+
+    <a href="mailto:info@axiomsettheory.com" class="contact-link">Contact:Info@axiomsettheory.com</a>
 
     <script>
         const canvas = document.getElementById('fractalCanvas');
@@ -468,6 +507,31 @@
             overlayText.classList.toggle('hidden');
             e.target.textContent = overlayText.classList.contains('hidden') ? 'Show Text' : 'Hide Text';
         });
+
+        function resizeCanvas() {
+            const padding = window.innerWidth <= 600 ? 20 : 40;
+            const maxWidth = 1200;
+            const maxHeight = 800;
+            const aspectRatio = maxWidth / maxHeight;
+
+            let width = Math.min(window.innerWidth - padding * 2, maxWidth);
+            let height = width / aspectRatio;
+
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * aspectRatio;
+            }
+
+            canvas.width = Math.round(width);
+            canvas.height = Math.round(height);
+
+            if (!config.animating) {
+                draw();
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
         // Start animation on page load
         startAnimation();
