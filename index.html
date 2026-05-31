@@ -185,9 +185,14 @@
         <button id="randomizeColors">Randomize Colors</button>
         <button id="toggleAnimation">Stop Animation</button>
         <button id="toggleText">Hide Text</button>
+        <button id="toggleAudio">Stop Audio</button>
     </div>
 
     <a href="mailto:info@axiomsettheory.com" class="contact-link">Contact:Info@axiomsettheory.com</a>
+
+    <audio id="bgAudio" loop>
+        <source src="https://www.dropbox.com/scl/fi/xlkb9dxi7bottxwqq3448/Storm-Clip.mp3?rlkey=4ov30oeisa6ymjgvgb5f9ntdq&st=cdzeoeyc&dl=1" type="audio/mpeg">
+    </audio>
 
     <script>
         const canvas = document.getElementById('fractalCanvas');
@@ -535,6 +540,29 @@
 
         // Start animation on page load
         startAnimation();
+
+        document.getElementById('toggleAudio').addEventListener('click', (e) => {
+            if (bgAudio.paused) {
+                bgAudio.play().catch(() => {});
+                e.target.textContent = 'Stop Audio';
+            } else {
+                bgAudio.pause();
+                e.target.textContent = 'Play Audio';
+            }
+        });
+
+        const bgAudio = document.getElementById('bgAudio');
+        bgAudio.volume = 0.5;
+
+        function startAudio() {
+            bgAudio.play().catch(() => {});
+        }
+
+        bgAudio.play().catch(() => {
+            // Autoplay blocked — start on first user interaction
+            document.addEventListener('click', startAudio, { once: true });
+            document.addEventListener('keydown', startAudio, { once: true });
+        });
     </script>
 </body>
 </html>
