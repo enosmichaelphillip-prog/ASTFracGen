@@ -544,10 +544,10 @@
         document.getElementById('toggleAudio').addEventListener('click', (e) => {
             if (bgAudio.paused) {
                 bgAudio.play().catch(() => {});
-                e.target.textContent = 'Stop Audio';
+                e.target.textContent = 'Stop';
             } else {
                 bgAudio.pause();
-                e.target.textContent = 'Play Audio';
+                e.target.textContent = 'Play';
             }
         });
 
